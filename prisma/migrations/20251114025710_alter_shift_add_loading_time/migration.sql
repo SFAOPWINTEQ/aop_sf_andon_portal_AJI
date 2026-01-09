@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Shift` ADD COLUMN `loadingTimeInSec` INTEGER NOT NULL DEFAULT 0;

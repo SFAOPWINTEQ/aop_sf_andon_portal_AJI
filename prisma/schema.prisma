@@ -1,0 +1,580 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "mysql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Achievement {
+  id          Int       @id @default(autoincrement())
+  workorderno String?
+  planid      String?
+  lineid      String?
+  shiftid     String?
+  partid      String?
+  qtylot      Int?
+  qtyacc      Int?
+  createdby   String?
+  createdat   DateTime? @default(now()) @db.DateTime(0)
+
+  @@map("achievement")
+}
+
+model DowntimeEvent {
+  id                         String    @id @default(cuid())
+  planId                     String
+  kind                       String
+  startTime                  DateTime
+  endTime                    DateTime?
+  durationSec                Int       @default(0)
+  updtCategoryId             String?
+  pdtCategoryId              String?
+  machineId                  String?
+  note                       String?
+  createdAt                  DateTime? @default(now())
+  updatedAt                  DateTime? @default(now())  @updatedAt
+  deletedAt                  DateTime?
+  responseTimeStart          DateTime?
+  responseTimeEnd            DateTime?
+  repairTimeStart            DateTime?
+  repairTimeEnd              DateTime?
+  afterRepairTimeStart       DateTime?
+  afterRepairTimeEnd         DateTime?
+  responseTimeDurationSec    Int?
+  afterRepairTimeDurationSec Int?
+  repairTimeDurationSec      Int?
+
+  machine Machine?       @relation(fields: [machineId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "DowntimeEvent_machineId_fkey")
+  pdtCat  PdtCategory?   @relation(fields: [pdtCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "DowntimeEvent_pdtCategoryId_fkey")
+  plan    ProductionPlan @relation(fields: [planId], references: [id], onDelete: Cascade, map: "DowntimeEvent_planId_fkey")
+  updtCat UpdtCategory?  @relation(fields: [updtCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "DowntimeEvent_updtCategoryId_fkey")
+
+  @@index([machineId], map: "DowntimeEvent_machineId_fkey")
+  @@index([pdtCategoryId], map: "DowntimeEvent_pdtCategoryId_fkey")
+  @@index([planId, kind], map: "DowntimeEvent_planId_kind_idx")
+  @@index([startTime], map: "DowntimeEvent_startTime_idx")
+  @@index([updtCategoryId], map: "DowntimeEvent_updtCategoryId_fkey")
+  @@map("downtimeevent")
+}
+
+model LogEvent {
+  id               Int       @id @default(autoincrement())
+  productionPlanId String
+  logEventType     String    @db.VarChar(45)
+  logEventDesc     String?
+  createdAt        DateTime  @default(now()) @db.DateTime(0)
+  deletedAt        DateTime? @db.DateTime(0)
+
+  plan ProductionPlan @relation(fields: [productionPlanId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_LOGEVENT_PRODPLANNINGID_PRODPLANNING_ID")
+
+  @@index([productionPlanId], map: "FK_LOGEVENT_PRODPLANNINGID_PRODPLANNING_ID")
+  @@map("log_event")
+}
+
+model LossTimeSummary {
+  id               String   @id @default(cuid())
+  planId           String   @unique(map: "LossTimeSummary_planId_key")
+  planWorkingSec   Int
+  actualWorkingSec Int
+  pdtSec           Int      @default(0)
+  updtSec          Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  plan ProductionPlan @relation(fields: [planId], references: [id], onDelete: Cascade, map: "LossTimeSummary_planId_fkey")
+
+  @@map("losstimesummary")
+}
+
+model Notification {
+  id           String    @id @default(cuid())
+  title        String
+  message      String
+  type         String    @default("INFO")
+  category     String?
+  isRead       Boolean   @default(false)
+  readAt       DateTime?
+  userId       String?
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Notification_userId_fkey")
+
+  @@index([userId, isRead, type], map: "Notification_userId_isRead_type_idx")
+  @@map("notification")
+}
+
+model OEERecord {
+  id           String   @id @default(cuid())
+  planId       String   @unique(map: "OEERecord_planId_key")
+  availability Decimal  @db.Decimal(5, 2)
+  performance  Decimal  @db.Decimal(5, 2)
+  quality      Decimal  @db.Decimal(5, 2)
+  oee          Decimal  @db.Decimal(5, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  plan ProductionPlan @relation(fields: [planId], references: [id], onDelete: Cascade, map: "OEERecord_planId_fkey")
+
+  @@map("oeerecord")
+}
+
+model ChildPart {
+  id                      String    @id @default(cuid())  
+  childPartNo             String    @unique(map: "ChildPart_childPartNo_key") 
+  childPartname           String
+  qtyLotSupply            Int?
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  deletedAt               DateTime?
+  partId                  String
+
+  part  Part              @relation(fields: [partId], references: [id], onDelete: NoAction, map: "ChildPart_partId_fkey")
+
+  @@index([partId], map: "ChildPart_partId_idx")
+  @@map("child_part")
+}
+
+model PdtCategory {
+  id                 String    @id @default(cuid())
+  name               String    @unique(map: "PdtCategory_name_key")
+  defaultDurationMin Int
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  DowntimeEvent        DowntimeEvent[]
+  planneddowntimeevent PlannedDowntimeEvent[]
+
+  @@map("pdtcategory")
+}
+
+model PlannedDowntimeEvent {
+  id                 String    @id @default(cuid())
+  planningProdId     String
+  startDowntime      DateTime  @default(now()) @db.DateTime(0)
+  endDowntime        DateTime? @db.DateTime(0)
+  durationSec        Int
+  pdtCategory        String
+  overPdtDurationSec Int?
+  note               String?
+  createdAt          DateTime  @default(now()) @db.DateTime(0)
+  updatedAt          DateTime  @default(now()) @db.DateTime(0)  @updatedAt
+  deletedAt          DateTime? @db.DateTime(0)
+
+  pdtcategory    PdtCategory    @relation(fields: [pdtCategory], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_PDTCATEGORY_ID")
+  productionplan ProductionPlan @relation(fields: [planningProdId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_PRODUCTIONPLAN_ID")
+
+  @@index([pdtCategory], map: "FK_PDTCATEGORY_ID_idx")
+  @@index([planningProdId], map: "FK_PRODUCTIONPLAN_ID_idx")
+  @@map("planneddowntimeevent")
+}
+
+model Plant {
+  id        String    @id @default(cuid())
+  name      String    @unique(map: "Plant_name_key")
+  subplant  String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  lines Line[]
+
+  @@index([isActive], map: "Plant_isActive_idx")
+  @@map("plant")
+}
+
+model ProductDetail {
+  id           String   @id @default(cuid())
+  planId       String
+  sequenceNo   Int
+  completedAt  DateTime @default(now())
+  cycleTimeSec Float?
+  isGood       Boolean  @default(true)
+
+  plan ProductionPlan @relation(fields: [planId], references: [id], onDelete: Cascade, map: "ProductDetail_planId_fkey")
+
+  @@unique([planId, sequenceNo], map: "ProductDetail_planId_sequenceNo_key")
+  @@index([planId, completedAt], map: "ProductDetail_planId_completedAt_idx")
+  @@map("productdetail")
+}
+
+model ProductionPlan {
+  id                 String    @id @default(cuid())
+  workOrderNo        String
+  planDate           DateTime
+  lineId             String
+  shiftId            String
+  partId             String
+  cycleTimeSec       Float
+  plannedQty         Int
+  actualQty          Int       @default(0)
+  ngQty              Int       @default(0)
+  sequence           Int       @default(1)
+  status             String    @default("OPEN")
+  startedAt          DateTime?
+  completedAt        DateTime?
+  isItHenkatenMan    Int?
+  HenkatenManMessage String?   @db.VarChar(200)
+  isItHenkatenMat    Int?
+  HenkatenMatMessage String?   @db.VarChar(200)
+  isItHenkatenMet    Int?
+  HenkatenMetMessage String?   @db.VarChar(200)
+  isItHenkatenMac    Int?
+  HenkatenMacMessage String?   @db.VarChar(200)
+  createdById        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  downtimes            DowntimeEvent[]
+  log_event            LogEvent[]
+  lossSummary          LossTimeSummary?
+  oeeCurrent           OEERecord?
+  planneddowntimeevent PlannedDowntimeEvent[]
+  productDetails       ProductDetail[]
+  createdBy            User?                  @relation(fields: [createdById], references: [id], map: "ProductionPlan_createdById_fkey")
+  line                 Line                   @relation(fields: [lineId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProductionPlan_lineId_fkey")
+  part                 Part                   @relation(fields: [partId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProductionPlan_partId_fkey")
+  shift                Shift                  @relation(fields: [shiftId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ProductionPlan_shiftId_fkey")
+  rejections           RejectionEvent[]
+
+  @@unique([planDate, lineId, shiftId, sequence], map: "ProductionPlan_planDate_lineId_shiftId_sequence_key")
+  @@index([createdById], map: "ProductionPlan_createdById_fkey")
+  @@index([lineId], map: "ProductionPlan_lineId_fkey")
+  @@index([partId], map: "ProductionPlan_partId_fkey")
+  @@index([planDate, lineId, shiftId], map: "ProductionPlan_planDate_lineId_shiftId_idx")
+  @@index([shiftId], map: "ProductionPlan_shiftId_fkey")
+  @@index([status], map: "ProductionPlan_status_idx")
+  @@index([workOrderNo], map: "ProductionPlan_workOrderNo_idx")
+  @@map("productionplan")
+}
+
+model RejectCriteria {
+  id        String    @id @default(cuid())
+  lineId    String
+  category  String
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  line           Line             @relation(fields: [lineId], references: [id], onDelete: NoAction, map: "RejectCriteria_lineId_fkey")
+  rejectionEvent RejectionEvent[]
+
+  @@unique([lineId, category, name], map: "RejectCriteria_lineId_category_name_key")
+  @@index([lineId, category], map: "RejectCriteria_lineId_category_idx")
+  @@map("rejectcriteria")
+}
+
+model RejectionEvent {
+  id         String    @id @default(cuid())
+  planId     String
+  occurredAt DateTime
+  qty        Int
+  category   String
+  criteria   String?
+  note       String?
+  criteriaId String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  rejectCriteria RejectCriteria? @relation(fields: [criteriaId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "RejectionEvent_criteriaId_fkey")
+  plan           ProductionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade, map: "RejectionEvent_planId_fkey")
+
+  @@index([category], map: "RejectionEvent_category_idx")
+  @@index([criteriaId], map: "RejectionEvent_criteriaId_fkey")
+  @@index([planId, occurredAt], map: "RejectionEvent_planId_occurredAt_idx")
+  @@map("rejectionevent")
+}
+
+model Shift {
+  id               String    @id @default(cuid())
+  lineId           String
+  number           Int
+  workStart        DateTime  @db.Time(0)
+  workEnd          DateTime  @db.Time(0)
+  break1Start      DateTime? @db.Time(0)
+  break1End        DateTime? @db.Time(0)
+  break2Start      DateTime? @db.Time(0)
+  break2End        DateTime? @db.Time(0)
+  break3Start      DateTime? @db.Time(0)
+  break3End        DateTime? @db.Time(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  loadingTimeInSec Int       @default(0)
+
+  plans ProductionPlan[]
+  line  Line             @relation(fields: [lineId], references: [id], onDelete: NoAction, map: "Shift_lineId_fkey")
+
+  @@unique([lineId, number], map: "Shift_lineId_number_key")
+  @@index([lineId, number], map: "Shift_lineId_number_idx")
+  @@map("shift")
+}
+
+model TestTable {
+  id   Int    @id @default(autoincrement())
+  time BigInt
+  PDT  Int?
+
+  @@map("testtable")
+}
+
+model UpdtCategory {
+  id         String    @id @default(cuid())
+  department String
+  lineId     String
+  name       String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  DowntimeEvent DowntimeEvent[]
+  line          Line            @relation(fields: [lineId], references: [id], onDelete: NoAction, map: "UpdtCategory_lineId_fkey")
+
+  @@unique([lineId, department, name], map: "UpdtCategory_lineId_department_name_key")
+  @@index([department], map: "UpdtCategory_department_idx")
+  @@index([lineId], map: "UpdtCategory_lineId_idx")
+  @@map("updtcategory")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  name        String
+  password    String?
+  isActive    Boolean   @default(true)
+  npk         String?   @unique(map: "User_npk_key")
+  role        String    @default("USER")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  Notification Notification[]
+  plansCreated ProductionPlan[]
+  userPerLines UserPerLine[] 
+  unitHistoriy UnitHistory[]   
+
+  @@map("user")
+}
+
+model UserPerLine {
+  id        String   @id @default(cuid())
+
+  uid       String
+  userId    String
+  lineId    String
+
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  line Line @relation(fields: [lineId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lineId])
+  @@unique([uid])
+  @@map("user_per_line")
+}
+
+model UnitTracking {
+  id               String   @id @default(cuid())
+  unitId           String
+
+  partId           String
+  part             Part     @relation(fields: [partId], references: [id])
+
+  previousStation  String
+  currentStation   String
+  nextStation      String
+  moveInTime       DateTime
+  moveOutTime      DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([partId])
+  @@map("unit_tracking")
+}
+
+model UnitHistory {
+  id               String   @id @default(cuid())
+  unitId           String
+
+  partId           String
+  part             Part     @relation(fields: [partId], references: [id])
+
+  machineId        String
+  machine          Machine  @relation(fields: [machineId], references: [id])
+
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+
+  result           String
+  cycleTimeSec     String
+
+  moveInTime       DateTime
+  moveOutTime      DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([partId])
+  @@index([machineId])
+  @@index([userId])
+  @@map("unit_history")
+}
+
+model UnitParameterResult {
+  id           String   @id @default(cuid())
+  unitId       String
+
+  partId       String
+  part         Part     @relation(fields: [partId], references: [id])
+
+  machineId    String
+  machine      Machine  @relation(fields: [machineId], references: [id])
+
+  parameterId  String
+  parameter    Parameter @relation(fields: [parameterId], references: [id])
+
+  value        String
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([unitId])
+  @@index([partId])
+  @@index([machineId])
+  @@index([parameterId])
+
+  @@unique([unitId, machineId, parameterId])
+  @@map("unit_parameter_result")
+}
+
+model MachineTypeParameter {
+  id              String   @id @default(cuid())
+  machineTypeId   String
+  parameterId     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  machineType MachineType @relation(fields: [machineTypeId], references: [id])
+  parameter   Parameter  @relation(fields: [parameterId], references: [id])
+
+  @@index([machineTypeId])
+  @@index([parameterId])
+  @@map("machine_type_parameters")
+}
+
+
+model Parameter {
+  id        String   @id @default(uuid())
+  name      String
+  unit      String
+  opcTagName String
+  
+  status    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  machineTypeParameters MachineTypeParameter[]
+  UnitParameterResult UnitParameterResult[]
+
+  @@map("parameters")
+}
+
+model MachineType {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  status    Int      @default(1)
+
+  Machine Machine[]
+  machineTypeParameters   MachineTypeParameter[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("machine_types")
+}
+
+model Machine {
+  id              String    @id @default(cuid())
+  lineId          String
+  machineTypeId   String
+
+  name            String
+  sequence        Int       @default(1)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  DowntimeEvent DowntimeEvent[]
+  unitHistoriy UnitHistory[]  
+  UnitParameterResult UnitParameterResult[] 
+  line          Line            @relation(fields: [lineId], references: [id], onDelete: NoAction, map: "Machine_lineId_fkey")
+  machineType   MachineType     @relation(fields: [machineTypeId], references: [id], onDelete: NoAction, map: "Machine_machineTypeId_fkey")
+
+  @@index([lineId], map: "Machine_lineId_idx")
+  @@index([machineTypeId], map: "Machine_machineTypeId_idx")
+  @@map("machine")
+}
+
+model Part {
+  id           String    @id @default(cuid())
+  sku          String?   @unique(map: "Part_sku_key")
+  partNo       String    @unique(map: "Part_partNo_key")
+  name         String
+  qtyPerLot    Int?
+  cycleTimeSec Float?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  lineId       String
+
+  line  Line             @relation(fields: [lineId], references: [id], onDelete: NoAction, map: "Part_lineId_fkey")
+  plans ProductionPlan[]
+  childParts ChildPart[]
+  unitTrackings UnitTracking[]   
+  unitHistoriy UnitHistory[]   
+  unitParameterResult UnitParameterResult[]
+
+  @@index([lineId], map: "Part_lineId_idx")
+  @@map("part")
+}
+
+model Line {
+  id        String    @id @default(cuid())
+  name      String    @unique(map: "Line_name_key")
+  plantId   String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plant    Plant            @relation(fields: [plantId], references: [id], onDelete: NoAction, map: "Line_plantId_fkey")
+  machines Machine[]
+  parts    Part[]
+  plans    ProductionPlan[]
+  rejCrits RejectCriteria[]
+  shifts   Shift[]
+  updtCats UpdtCategory[]
+  userPerLines UserPerLine[] 
+
+  @@index([isActive], map: "Line_isActive_idx")
+  @@index([plantId], map: "Line_plantId_idx")
+  @@map("line")
+}
