@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcrypt";
 import { SignJWT } from "jose";
-import { loginSchema } from "@/server/authModel";
+import { login2Schema } from "@/server/authModel";
 import { authRepository } from "@/server/authRepository";
 
 // Secret for JWT - should be in environment variables
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate input
-    const validation = loginSchema.safeParse(body);
+    const validation = login2Schema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(

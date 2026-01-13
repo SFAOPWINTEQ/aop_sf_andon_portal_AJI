@@ -360,7 +360,6 @@ model User {
   Notification Notification[]
   plansCreated ProductionPlan[]
   userPerLines UserPerLine[] 
-  unitHistoriy UnitHistory[]   
 
   @@map("user")
 }
@@ -417,8 +416,7 @@ model UnitHistory {
   machineId        String
   machine          Machine  @relation(fields: [machineId], references: [id])
 
-  userId           String
-  user             User     @relation(fields: [userId], references: [id])
+  operatorNpk      String
 
   result           String
   cycleTimeSec     String
@@ -431,7 +429,6 @@ model UnitHistory {
 
   @@index([partId])
   @@index([machineId])
-  @@index([userId])
   @@map("unit_history")
 }
 

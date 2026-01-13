@@ -13,8 +13,7 @@ export type UnitHistoryData = {
   partNo: string;
   partName?: string;
 
-  userNpk?: string | null;
-  userName?: string | null;
+  operatorNpk?: string | null;
   
   machineName: string;
   sequence: string;
@@ -61,9 +60,9 @@ export const unitHistoryColumns: ColumnDef<UnitHistoryData>[] = [
     cell: ({ row }) => <Badge variant="outline">{row.getValue("machineName")} -  #{row.original.sequence}</Badge>,
   },
   {
-    accessorKey: "userNpk",
+    accessorKey: "operatorNpk",
     header: "Operator ID",
-    cell: ({ row }) => <Badge variant="outline">{row.getValue("userNpk")}</Badge>,
+    cell: ({ row }) => <Badge variant="outline">{row.getValue("operatorNpk")}</Badge>,
   },
   {
     accessorKey: "result",

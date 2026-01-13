@@ -40,9 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate input
     const validation = loginSchema.safeParse(body);
-
     if (!validation.success) {
       return NextResponse.json(
         {
@@ -53,41 +51,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { npk, password, uid } = validation.data;
+    const data = validation.data;
 
-    
+    // ======================
+    // LOGIN VIA UID
+    // ======================
+    if ("uid" in data) {
+      const { uid, line } = data;
 
-    if (uid) {
-      let user;
-
-      // Login via UID
-      user = await db.userPerLine.findFirst({
-        where: { uid, deletedAt: null, isActive: true }, // pastikan field UID ada di table user
-        select: { 
-          id: true, 
-          user : {
+      const user = await db.userPerLine.findFirst({
+        where: {
+          uid,
+          deletedAt: null,
+          isActive: true,
+          lineId: line,
+        },
+        select: {
+          id: true,
+          user: {
             select: {
               id: true,
               name: true,
               npk: true,
               role: true,
-              isActive: true
-            }
-          } 
+              isActive: true,
+            },
+          },
         },
       });
 
       if (!user) {
         return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid NPK or password",
-          },
+          { success: false, message: "Invalid UID or line" },
           { status: 401 },
         );
       }
-      
-      // Generate JWT token
+
       const token = await new SignJWT({
         userId: user.user.id,
         npk: user.user.npk,
@@ -99,7 +98,6 @@ export async function POST(request: NextRequest) {
         .setExpirationTime("30d")
         .sign(JWT_SECRET);
 
-      // Update last login timestamp
       await authRepository.updateLastLogin(user.user.id);
 
       return NextResponse.json(
@@ -108,7 +106,7 @@ export async function POST(request: NextRequest) {
           message: "Login successful",
           token,
           user: {
-            id: user.id,
+            id: user.user.id,
             npk: user.user.npk,
             name: user.user.name,
             role: user.user.role,
@@ -119,17 +117,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by NPK
-    const Masteruser = await db.userPerLine.findFirst({
-      where: { 
-        user: {
-          npk: npk
-        },
+    // ======================
+    // LOGIN VIA NPK + PASSWORD
+    // ======================
+    const { npk, password, line } = data;
+
+    const masterUser = await db.userPerLine.findFirst({
+      where: {
+        user: { npk },
         deletedAt: null,
-        isActive: true
+        isActive: true,
+        lineId: line,
       },
       select: {
-        user : {
+        user: {
           select: {
             id: true,
             npk: true,
@@ -137,58 +138,49 @@ export async function POST(request: NextRequest) {
             password: true,
             role: true,
             isActive: true,
-          }
-        }
+          },
+        },
       },
     });
 
-    if (!Masteruser || !Masteruser.user.password) {
+    if (!masterUser || !masterUser.user.password) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid NPK or password",
-        },
+        { success: false, message: "Invalid NPK or password" },
         { status: 401 },
       );
     }
 
-    // Check if user is active
-    if (!Masteruser.user.isActive) {
+    if (!masterUser.user.isActive) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "User is inactive. Please contact administrator.",
-        },
+        { success: false, message: "User is inactive" },
         { status: 403 },
       );
     }
 
-    // Verify password
-    const passwordsMatch = await bcrypt.compare(password, Masteruser.user.password);
-    if (!passwordsMatch) {
+    const passwordMatch = await bcrypt.compare(
+      password,
+      masterUser.user.password,
+    );
+
+    if (!passwordMatch) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid NPK or password",
-        },
+        { success: false, message: "Invalid NPK or password" },
         { status: 401 },
       );
     }
 
-    // Generate JWT token
     const token = await new SignJWT({
-      userId: Masteruser.user.id,
-      npk: Masteruser.user.npk,
-      role: Masteruser.user.role,
-      isActive: Masteruser.user.isActive,
+      userId: masterUser.user.id,
+      npk: masterUser.user.npk,
+      role: masterUser.user.role,
+      isActive: masterUser.user.isActive,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("30d")
       .sign(JWT_SECRET);
 
-    // Update last login timestamp
-    await authRepository.updateLastLogin(Masteruser.user.id);
+    await authRepository.updateLastLogin(masterUser.user.id);
 
     return NextResponse.json(
       {
@@ -196,11 +188,11 @@ export async function POST(request: NextRequest) {
         message: "Login successful",
         token,
         user: {
-          id: Masteruser.user.id,
-          npk: Masteruser.user.npk,
-          name: Masteruser.user.name,
-          role: Masteruser.user.role,
-          isActive: Masteruser.user.isActive,
+          id: masterUser.user.id,
+          npk: masterUser.user.npk,
+          name: masterUser.user.name,
+          role: masterUser.user.role,
+          isActive: masterUser.user.isActive,
         },
       },
       { status: 200 },
@@ -208,10 +200,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "An unexpected error occurred",
-      },
+      { success: false, message: "An unexpected error occurred" },
       { status: 500 },
     );
   }

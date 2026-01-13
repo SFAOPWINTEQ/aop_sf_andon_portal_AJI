@@ -2,7 +2,7 @@
 
 import { signIn, signOut, auth } from "@/auth";
 import { AuthError } from "next-auth";
-import { type LoginInput, type LoginResponse, loginSchema } from "./authModel";
+import { type LoginInput2, type LoginResponse, login2Schema } from "./authModel";
 import { authRepository } from "@/server/authRepository";
 import { db } from "@/lib/db";
 import bcrypt from "bcrypt";
@@ -161,9 +161,9 @@ export async function withRole<T>(
 
 // ==================== Auth Actions ====================
 
-export async function login(data: LoginInput): Promise<LoginResponse> {
+export async function login(data: LoginInput2): Promise<LoginResponse> {
   // Validate input
-  const validation = loginSchema.safeParse(data);
+  const validation = login2Schema.safeParse(data);
 
   if (!validation.success) {
     return {

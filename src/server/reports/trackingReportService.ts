@@ -72,12 +72,6 @@ export async function getTrackingReport(params: {
                     }
                 }
             }
-        },
-        user: {
-            select: {
-                name: true,
-                npk: true,
-            }
         }
       },
       orderBy: {
@@ -154,8 +148,7 @@ export async function getTrackingReport(params: {
       partNo: history.part.partNo,
       partName: history.part.name,
 
-      userNpk: history.user.npk,
-      userName: history.user.name,
+      userNpk: history.operatorNpk,
 
       machineName: history.machine.machineType.name,
       sequence: history.machine.sequence.toString(),

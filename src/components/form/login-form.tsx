@@ -22,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
-import { LoginInput, loginSchema } from "@/server/authModel";
+import { LoginInput2, login2Schema } from "@/server/authModel";
 import { Logo } from "@/components/logo";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -33,15 +33,15 @@ export function LoginForm() {
   const router = useRouter();
   const { update } = useSession();
 
-  const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<LoginInput2>({
+    resolver: zodResolver(login2Schema),
     defaultValues: {
       npk: "",
       password: "",
     },
   });
 
-  async function onSubmit(data: LoginInput) {
+  async function onSubmit(data: LoginInput2) {
     // Clear any previous errors
     setError(null);
 
