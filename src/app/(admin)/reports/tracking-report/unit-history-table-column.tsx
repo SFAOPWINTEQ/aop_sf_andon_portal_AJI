@@ -60,9 +60,9 @@ export const unitHistoryColumns: ColumnDef<UnitHistoryData>[] = [
     cell: ({ row }) => <Badge variant="outline">{row.getValue("machineName")} -  #{row.original.sequence}</Badge>,
   },
   {
-    accessorKey: "operatorNpk",
+    accessorKey: "userNpk",
     header: "Operator ID",
-    cell: ({ row }) => <Badge variant="outline">{row.getValue("operatorNpk")}</Badge>,
+    cell: ({ row }) => <Badge variant="outline">{row.getValue("userNpk")}</Badge>,
   },
   {
     accessorKey: "result",
